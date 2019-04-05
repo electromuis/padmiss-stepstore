@@ -1,5 +1,6 @@
 const express = require('express')
 const bodyParser = require("body-parser");
+const cors = require('cors')
 
 const axios = require('axios')
 const mkdirp = require('mkdirp');
@@ -11,6 +12,7 @@ const app = express()
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use('/storage', express.static('storage'))
+app.use(cors())
 
 const port = 80
 
@@ -79,8 +81,8 @@ app.post('/add-chart', (req, res) => {
                     return
                 }
 
-                let data = base64decode(req.body.file)
-                fs.writeFile(playerPath + name, data, function(err) {
+                let data = req.body.file
+                fs.writeFile(playerPath + name, data, 'base64', function(err) {
                     if(err) {
                         reject("Failed putting file")
                         return
@@ -131,7 +133,7 @@ app.get('/get-charts', (req, res) => {
         })
 })
 
-app.delete('/delete-chart', (req, res) => {
+app.post('/delete-chart', (req, res) => {
     let ret = {status: "OK"}
 
     if(!req.body.token || !req.body.name) {
