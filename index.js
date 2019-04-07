@@ -10,7 +10,7 @@ const { base64encode, base64decode } = require('nodejs-base64');
 
 const app = express()
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '15mb'}));
 app.use('/storage', express.static('storage'))
 app.use(cors())
 
@@ -76,10 +76,11 @@ app.post('/add-chart', (req, res) => {
                     return
                 }
 
-                if(req.body.file.length > (1024 ^ 2 * 8)) {
-                    reject("File too big: " + req.body.file.length)
-                    return
-                }
+                //Already handled by express
+                // if(req.body.file.length > (1024 ^ 2 * 8)) {
+                //     reject("File too big: " + req.body.file.length)
+                //     return
+                // }
 
                 let data = req.body.file
                 fs.writeFile(playerPath + name, data, 'base64', function(err) {
