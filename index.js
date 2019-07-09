@@ -1,12 +1,16 @@
 const express = require('express')
-const bodyParser = require("body-parser");
+const bodyParser = require("body-parser")
 const cors = require('cors')
 
 const axios = require('axios')
 const mkdirp = require('mkdirp');
 const fs = require('fs');
 const path = require('path')
-const { base64encode, base64decode } = require('nodejs-base64');
+const { base64encode, base64decode } = require('nodejs-base64')
+
+const { request } = require('graphql-request')
+const NotesWriter = require('./NotesWriter.js')
+const graphUrl = 'https://api.padmiss.com/graphiql'
 
 const app = express()
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -14,7 +18,7 @@ app.use(bodyParser.json({limit: '15mb'}));
 app.use('/storage', express.static('storage'))
 app.use(cors())
 
-const port = 80
+const port = 8080
 
 app.get('/', (req, res) => res.send('Hello World!'))
 var api = "https://api.padmiss.com"
@@ -174,6 +178,90 @@ app.post('/delete-chart', (req, res) => {
             res.send(ret)
         })
 })
+
+app.get('/get-stats', (req, res) => {
+	request(graphUrl, `
+		{
+		  Scores (sort: "-playedAt") {
+			docs {
+			  scoreValue
+			  originalScore
+			  stepsInfo
+			  noteSkin
+			  playedAt
+			  player {
+				_id
+				nickname
+				shortNickname
+			  }
+			  stepChart {
+				groups,
+				stepData
+				song {
+				  title
+				  artist
+				}
+			  }
+			  modsOther {
+				name
+				value
+			  }
+			  scoreBreakdown {
+				fantastics
+				excellents
+				greats
+				decents
+				wayoffs
+				misses
+				holds
+				holdsTotal
+			  }
+			}
+		  }
+		}
+	`).then(data => {
+		let songs = {}
+		let path = "Songs"
+
+		data.Scores.docs.forEach(s => {
+			let reader = new NotesWriter()
+			reader.setData(s.stepChart.stepData)
+			reader.read()
+
+			let groups = ['Main']
+			groups.forEach(g => {
+				reader.charts.forEach(c => {
+
+					let name = path + "/" + g + "/" + s.stepChart.song.title
+					let k = c.level + "-" + c.diff
+
+					if(typeof songs[name] === 'undefined')
+						songs[name] = {}
+
+					if(typeof songs[name][k] === 'undefined')
+						songs[name][k] = []
+
+					songs[name][k].push(s)
+
+				})
+			})
+		});
+
+		console.log(songs)
+
+		let xml = {
+			Test: []
+		}
+
+		res.set('Content-Type', 'application/json');
+		res.send(JSON.stringify(xml))
+        return
+	})
+	.catch(err => {
+		console.log(err)
+        res.send(err)
+    });
+});
 
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))

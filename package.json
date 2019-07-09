@@ -7,7 +7,9 @@
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "cors": "^2.8.5",
+    "crc32": "^0.2.2",
     "express": "^4.16.4",
+    "graphql-request": "^1.8.2",
     "mkdirp": "^0.5.1",
     "nodejs-base64": "^1.0.3"
   },
