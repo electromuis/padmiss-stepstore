@@ -18,11 +18,13 @@ app.use(bodyParser.json({limit: '15mb'}));
 app.use('/storage', express.static('storage'))
 app.use(cors())
 
-const port = 8080
+const port = 80
 
 app.get('/', (req, res) => res.send('Hello World!'))
 var api = "https://api.padmiss.com"
 var basePath = 'http://electromuis1.openode.io/'
+
+var cabs = {}
 
 function checkToken(token)
 {
@@ -48,6 +50,59 @@ function checkToken(token)
             })
         })
 }
+
+app.post('/broadcast-cab', (req, res) => {
+    let ret = {status: "OK"}
+
+    if(!req.body.token || !req.body.ip) {
+        ret.status = "ERROR"
+        ret.message = "Missing fields"
+        res.send(ret)
+        return
+    }
+
+    request(graphUrl, `
+		{
+		  ArcadeCabs (queryString: ` + JSON.stringify(JSON.stringify({apiKey: req.body.token})) + `) {
+			docs {
+			  _id
+              name
+			}
+		  }
+		}
+	`).then(data => {
+        if(!data.ArcadeCabs || !data.ArcadeCabs.docs) {
+            ret.status = "ERROR"
+            ret.message = "Token not valid"
+            res.send(ret)
+            return
+        }
+
+        var cab = data.ArcadeCabs.docs[0]
+        var date = new Date()
+        cab.updatedAt = date.getTime()
+        cab.ip = req.body.ip
+        cabs[cab._id] = cab
+
+        res.send(ret)
+    })
+
+})
+
+app.get('/live-cabs', (req, res) => {
+    let ret = {status: "OK", cabs: []}
+
+    Object.entries(cabs).forEach(([k, v]) => {
+        var date = new Date()
+        var from = date.getTime() - (1000 * 60)
+
+        if(v.updatedAt > from) {
+            ret.cabs.push(v)
+        }
+    })
+
+    res.send(ret)
+})
 
 app.post('/add-chart', (req, res) => {
     let ret = {status: "OK"}
